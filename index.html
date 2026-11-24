@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>失認症體驗遊戲</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a neuropsychology test kit, playful enough for a classroom game
+   IDEA: the clinician's test card — a white card with an image, the patient's view degraded
+   PICTURE: the big test card itself, filling the left of the screen
+   COLOUR and TYPE: deep navy band, white card, teal for correct, coral for lesions; Noto Sans TC
+   LAYOUT: tab row of six tests, card left and answers right, stacking under 760px */
+:root{color-scheme:light dark;--bg:light-dark(#eef1f5,#0b1426);--band:light-dark(#12264a,#08101f);--card:light-dark(#ffffff,#13213b);--ink:light-dark(#12264a,#e8edf6);--soft:light-dark(#5b6b86,#9fb0cc);--line:light-dark(#d6dce6,#263655);--teal:#0e8c8a;--coral:#f2603b}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Noto Sans TC",system-ui,sans-serif;overflow-x:clip}
+header{background:var(--band);color:#fff;padding:22px max(4vw,16px) 0}
+h1{margin:0;font-size:clamp(26px,4vw,42px);line-height:1.1;font-weight:900}
+header p{margin:6px 0 16px;color:#b9c6dc;font-size:16px}
+.tabs{display:flex;gap:6px;overflow-x:auto}
+.tabs button{flex:none;font:700 16px "Noto Sans TC",sans-serif;padding:12px 16px;min-height:48px;border:0;border-radius:12px 12px 0 0;background:#1d3766;color:#cdd8ea;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--bg);color:var(--ink)}
+main{padding:clamp(18px,3vw,36px) max(4vw,16px);max-width:1240px;margin:0 auto}
+.stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(18px,3vw,36px);align-items:start}
+.cardwrap{background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:0 12px 30px rgba(18,38,74,.12)}
+.cardwrap canvas,.cardwrap svg{display:block;width:100%;aspect-ratio:1;max-height:64vh;margin:0 auto}
+.side h2{margin:0 0 6px;font-size:28px;line-height:1.15}
+.side .type{display:inline-block;background:var(--coral);color:#fff;font-weight:700;font-size:14px;padding:3px 10px;border-radius:99px;margin-bottom:10px}
+.side p{margin:0 0 14px;color:var(--soft)}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.opts.many{grid-template-columns:repeat(3,minmax(0,1fr))}
+.opts button,.ctl button{font:700 19px "Noto Sans TC",sans-serif;min-height:56px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.opts button:hover{border-color:var(--teal)}
+.opts button.ok{background:var(--teal);border-color:var(--teal);color:#fff}
+.opts button.no{background:var(--coral);border-color:var(--coral);color:#fff}
+.opts button.on{border-color:var(--teal);box-shadow:inset 0 0 0 2px var(--teal)}
+.ctl{display:flex;flex-wrap:wrap;gap:10px}
+.ctl button{padding:0 18px;font-size:17px}
+.ctl .main{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.meter{display:flex;gap:6px;margin:4px 0 12px}.meter i{flex:1;height:8px;border-radius:9px;background:var(--line)}.meter i.f{background:var(--teal)}
+.score{font-weight:900;font-size:20px}
+.msg{min-height:56px;font-size:18px;font-weight:700;margin-top:12px}
+.note{margin-top:22px;padding:14px 16px;border-left:4px solid var(--teal);background:var(--card);border-radius:0 12px 12px 0;color:var(--soft);font-size:15px}
+.brainfig svg{aspect-ratio:440/300}
+.reg{cursor:pointer;fill:var(--teal);fill-opacity:.25;stroke:var(--teal);stroke-width:2;transition:fill-opacity .2s}
+.reg:hover,.reg.sel{fill:var(--coral);fill-opacity:.55;stroke:var(--coral)}
+.lab{font:700 12px "Noto Sans TC",sans-serif;fill:#12264a;pointer-events:none}
+dl{margin:0}dt{font-weight:700;margin-top:10px}dd{margin:2px 0 0;color:var(--soft)}
+.credit{font-size:13px;color:var(--soft);margin-top:10px}
+[hidden]{display:none!important}
+@media(max-width:760px){.stage{grid-template-columns:minmax(0,1fr)}.cardwrap canvas{max-height:52vh}.opts.many{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.reg{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>你認得出來嗎？</h1>
+  <p>六個小測驗，體驗物體失認症病人的視覺世界（教學模擬，不等於病人的真實經驗）</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-m="frag">① 碎裂的輪廓</button>
+    <button role="tab" aria-selected="false" data-m="peek">② 小窗偷看</button>
+    <button role="tab" aria-selected="false" data-m="sil">③ 剪影 vs 線條</button>
+    <button role="tab" aria-selected="false" data-m="view">④ 換個角度</button>
+    <button role="tab" aria-selected="false" data-m="over">⑤ 重疊圖形</button>
+    <button role="tab" aria-selected="false" data-m="brain">⑥ 腦區地圖</button>
+  </div>
+</header>
+<main>
+  <section id="game" class="stage">
+    <div class="cardwrap"><canvas id="cv" width="480" height="480" aria-label="測驗圖卡"></canvas></div>
+    <div class="side">
+      <span class="type" id="gtype"></span>
+      <h2 id="gtitle"></h2>
+      <p id="gdesc"></p>
+      <div class="meter" id="meter"></div>
+      <div class="opts" id="opts"></div>
+      <div class="ctl" id="ctl"></div>
+      <div class="msg" id="msg" aria-live="polite"></div>
+      <div class="score" id="score"></div>
+    </div>
+  </section>
+  <section id="brain" class="stage" hidden>
+    <div class="cardwrap brainfig"><svg id="bsvg" viewBox="0 0 440 300" aria-label="大腦側面示意圖"></svg></div>
+    <div class="side">
+      <span class="type">點腦區看看</span>
+      <h2 id="bname">哪裡受損，就失去什麼？</h2>
+      <p id="ben">點左圖任一個圓圈。青綠箭頭是腹側路徑（What），虛線是背側路徑（How）。</p>
+      <dl id="binfo"></dl>
+    </div>
+  </section>
+  <div class="note" id="note"></div>
+  <p class="credit">物品圖片為 AI 生成的教學素材；剪影由照片自動轉換。腦區圖為示意圖。</p>
+</main>
+<script>
+{
+const OBJ=[['toothbrush','牙刷'],['hairbrush','梳子'],['whisk','打蛋器'],['opener','開瓶器'],['stapler','釘書機'],['dryer','吹風機'],['mouse','滑鼠'],['garlic','壓蒜器'],['tape','膠台'],['headphones','耳機']];
+const VIEW=[['bucket','水桶','從正上方往下看'],['umbrella','摺疊傘','從傘尖正前方看'],['teapot','茶壺','從正下方往上看'],['helmet','單車安全帽','從正後方看'],['kettle','煮水壺','從正上方往下看'],['heel','高跟鞋','從鞋尖正前方看']];
+const $=id=>document.getElementById(id);
+const rnd=n=>Math.floor(Math.random()*n);
+const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
+const cv=$('cv'),ctx=cv.getContext('2d'),W=480;
+const cache={};
+const load=src=>cache[src]||(cache[src]=new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src}));
+const S={frag:[0,0],peek:[0,0],sil:[0,0],view:[0,0],over:[0,0]};
+let mode='frag',cur=0,lvl=0,done=false,anim=0,picks=new Set(),set3=[],token=0;
+
+const INFO={
+ frag:{type:'模擬統覺型 Apperceptive',t:'碎裂的輪廓',d:'線條被打碎了，你看得出是什麼嗎？猜不到再按「看清楚一點」。',note:'統覺型失認：例如個案 D.F.，一氧化碳中毒造成雙側外側枕葉皮質（LOC）損傷及瀰漫性損傷。她連長方形和正方形都分不出來。'},
+ peek:{type:'模擬整合型 Integrative',t:'小窗偷看',d:'物品是完整的，但一次只能透過移動的小窗看到一部分。你能拼出整體嗎？',note:'整合型失認：例如個案 H.J.A.，後大腦動脈中風造成腹側視覺路徑大範圍損傷。他保有臨摹能力，局部特徵也看得到，就是整合不成整體（Riddoch & Humphreys, 1987）。'},
+ sil:{type:'H.J.A. 研究的材料',t:'剪影 vs 線條畫',d:'只剩外輪廓的剪影，你認得出來嗎？作答後會看到同一個物品的細節線條畫。',note:'整合型失認的研究常比較剪影與線條畫：線條畫多了很多內部線條，對整合有困難的病人來說，這些線條可能反而是干擾，而不是線索（Riddoch & Humphreys, 1987）。'},
+ view:{type:'物體恆常性',t:'換個角度，你還認得嗎？',d:'這些都是很常見的東西，只是換了一個少見的角度。卡住的話可以按「提示」。',note:'我們從各種角度都能認出同一個物體，靠的是腹側路徑把不同畫面對應到同一個物體表徵。即使是大腦正常的人，遇到少見角度，辨認也會明顯變慢。'},
+ over:{type:'改編自臨床作業',t:'重疊圖形',d:'圖裡藏了 3 樣東西，全部選出來後按「對答案」。',note:'改編自 Poppelreuter 重疊圖形作業（教學示意，非標準化測驗）。一般人幾秒內就能把線條分配給不同物體；整合型病人卡住的，正是這一步。'}
+};
+
+function meter(max){$('meter').innerHTML=max?Array.from({length:max},(_,i)=>`<i class="${i<=lvl?'f':''}"></i>`).join(''):''}
+function score(){const s=S[mode];$('score').textContent=s?`得分 ${s[0]} / ${s[1]}`:''}
+function blank(){ctx.globalCompositeOperation='source-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,W,W)}
+function opts4(n,ans){return shuf([ans,...shuf([...Array(n).keys()].filter(i=>i!==ans)).slice(0,3)])}
+function ctlBar(extra){$('ctl').innerHTML=(extra||'')+'<button id="next">下一題</button><button id="fs">全螢幕</button>'}
+
+async function drawFrag(){
+  const t=++token,im=await load('img/l_'+OBJ[cur][0]+'.png');if(t!==token)return;blank();
+  if(im)ctx.drawImage(im,0,0,W,W);
+  const keep=[0.2,0.38,0.62,1][lvl],noise=[46,28,12,0][lvl],cell=16;
+  ctx.fillStyle='#fff';
+  for(let y=0;y<W;y+=cell)for(let x=0;x<W;x+=cell)if(Math.random()>keep)ctx.fillRect(x,y,cell,cell);
+  ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.lineCap='round';
+  for(let i=0;i<noise;i++){const x=20+rnd(440),y=20+rnd(440),a=Math.random()*6.28,L=8+rnd(18);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*L,y+Math.sin(a)*L);ctx.stroke()}
+}
+async function drawPeek(){
+  const t=++token,im=await load('img/p_'+OBJ[cur][0]+'.jpg');if(t!==token)return;
+  const r=[34,52,82,999][lvl];cancelAnimationFrame(anim);
+  const paint=(x,y)=>{ctx.fillStyle='#dfe4ec';ctx.fillRect(0,0,W,W);ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,6.2832);ctx.clip();if(im)ctx.drawImage(im,0,0,W,W);ctx.restore()};
+  if(lvl>=3){paint(W/2,W/2);return}
+  let p=[W/2,W/2],q=[80+rnd(320),80+rnd(320)],u=0;const sp=matchMedia('(prefers-reduced-motion: reduce)').matches?0.004:0.011;
+  const step=()=>{if(t!==token)return;u+=sp;if(u>=1){p=q;q=[70+rnd(340),70+rnd(340)];u=0}const e=u*u*(3-2*u);paint(p[0]+(q[0]-p[0])*e,p[1]+(q[1]-p[1])*e);anim=requestAnimationFrame(step)};
+  anim=requestAnimationFrame(step);
+}
+async function drawSil(reveal){
+  const t=++token,k=OBJ[cur][0];const s=await load('img/s_'+k+'.png'),l=await load('img/l_'+k+'.png');if(t!==token)return;blank();
+  if(!reveal){if(s)ctx.drawImage(s,0,0,W,W);return}
+  if(s)ctx.drawImage(s,6,110,228,228);if(l)ctx.drawImage(l,246,110,228,228);
+  ctx.fillStyle='#12264a';ctx.font='700 20px "Noto Sans TC",sans-serif';ctx.textAlign='center';ctx.fillText('剪影',120,380);ctx.fillText('線條畫',360,380);
+}
+async function drawView(){
+  const t=++token,im=await load('img/v_'+VIEW[cur][0]+'.jpg');if(t!==token)return;blank();if(im)ctx.drawImage(im,0,0,W,W);
+}
+async function drawOver(reveal){
+  const t=++token,ims=await Promise.all(set3.map(i=>load('img/l_'+OBJ[i][0]+'.png')));if(t!==token)return;blank();
+  const tf=[[-26,-18,-0.12,0.92],[24,10,0.18,0.9],[0,22,-0.05,0.96]],col=['#e0482a','#0e8c8a','#6c4fd1'];
+  ims.forEach((im,k)=>{if(!im)return;let src=im;
+    if(reveal){const o=document.createElement('canvas');o.width=o.height=W;const c=o.getContext('2d');c.drawImage(im,0,0,W,W);c.globalCompositeOperation='lighten';c.fillStyle=col[k];c.fillRect(0,0,W,W);src=o}
+    const [dx,dy,rot,sc]=tf[k];ctx.save();ctx.globalCompositeOperation='multiply';ctx.translate(W/2+dx,W/2+dy);ctx.rotate(rot);ctx.scale(sc,sc);ctx.drawImage(src,-W/2,-W/2,W,W);ctx.restore()});
+  ctx.globalCompositeOperation='source-over';
+}
+
+function round(){
+  cancelAnimationFrame(anim);done=false;lvl=0;$('msg').textContent='';picks=new Set();
+  const I=INFO[mode];$('gtype').textContent=I.type;$('gtitle').textContent=I.t;$('gdesc').textContent=I.d;$('note').textContent=I.note;
+  $('opts').className='opts';
+  if(mode==='over'){
+    set3=shuf([...OBJ.keys()]).slice(0,3);meter(0);$('opts').className='opts many';
+    $('opts').innerHTML=OBJ.map((o,i)=>`<button data-i="${i}" aria-pressed="false">${o[1]}</button>`).join('');
+    ctlBar('<button class="main" id="check">對答案</button>');drawOver(false);score();return;
+  }
+  if(mode==='view'){
+    cur=rnd(VIEW.length);meter(0);
+    $('opts').innerHTML=opts4(VIEW.length,cur).map(i=>`<button data-i="${i}">${VIEW[i][1]}</button>`).join('');
+    ctlBar('<button class="main" id="hint">提示</button>');drawView();score();return;
+  }
+  cur=rnd(OBJ.length);
+  $('opts').innerHTML=opts4(OBJ.length,cur).map(i=>`<button data-i="${i}">${OBJ[i][1]}</button>`).join('');
+  if(mode==='sil'){meter(0);ctlBar('');drawSil(false)}
+  else{meter(4);ctlBar(`<button class="main" id="more">${mode==='frag'?'看清楚一點':'窗口放大一點'}</button>`);mode==='frag'?drawFrag():drawPeek()}
+  score();
+}
+function answer(b){
+  if(done)return;done=true;const i=+b.dataset.i,s=S[mode];s[1]++;
+  const name=mode==='view'?VIEW[cur][1]:OBJ[cur][1];
+  if(i===cur){s[0]++;b.classList.add('ok');$('msg').textContent=mode==='frag'||mode==='peek'?`答對了！在第 ${lvl+1} 個清晰度就認出來。`:'答對了！'}
+  else{b.classList.add('no');$('opts').querySelector(`[data-i="${cur}"]`)?.classList.add('ok');$('msg').textContent=`答案是「${name}」。`}
+  cancelAnimationFrame(anim);
+  if(mode==='frag'||mode==='peek'){lvl=3;meter(4);mode==='frag'?drawFrag():drawPeek()}
+  if(mode==='sil'){drawSil(true);$('msg').textContent+=' 左邊剪影、右邊線條畫，哪一個比較好認？'}
+  if(mode==='view'){$('msg').textContent+=`（${VIEW[cur][2]}）`}
+  score();
+}
+function overCheck(){
+  if(done)return;done=true;const s=S.over;s[1]++;
+  const right=[...picks].filter(i=>set3.includes(i)).length,wrong=picks.size-right;
+  if(right===3&&wrong===0)s[0]++;
+  drawOver(true);
+  $('opts').querySelectorAll('button').forEach(b=>{const i=+b.dataset.i;if(set3.includes(i))b.classList.add('ok');else if(picks.has(i))b.classList.add('no')});
+  $('msg').textContent=right===3&&wrong===0?'全對！你的腹側路徑運作正常。':`找到 ${right} / 3 個，答案已用顏色標出來。`;
+  score();
+}
+
+const R=[
+ {id:'v1',cx:392,cy:160,rx:14,ry:30,lx:360,ly:118,lab:'V1',n:'初級視覺皮質 V1',en:'Primary visual cortex',f:'接收眼睛訊號，偵測邊緣、線條方向與位置。',d:'對側視野失明（皮質盲）。這是真的「看不見」，不是失認症。'},
+ {id:'v4',cx:352,cy:214,rx:22,ry:11,lx:352,ly:240,lab:'V4',n:'V4 區',en:'Visual area V4',f:'處理顏色與曲線形狀。',d:'大腦性色盲（achromatopsia），世界變成灰階。個案 H.J.A. 也有這個症狀。'},
+ {id:'loc',cx:340,cy:172,rx:22,ry:16,lx:318,ly:150,lab:'LOC',n:'外側枕葉複合區 LOC',en:'Lateral occipital complex',f:'把輪廓組合成物體形狀；看完整物體比看打散的圖片更活化。',d:'視覺形狀失認（統覺型的一種）：形狀辨認嚴重受損。D.F. 的雙側 LOC 受損，看物體與打散圖時 LO 沒有活化差異（James et al., 2003）。注意：物體辨認依賴整個腹側網絡，不只 LOC。'},
+ {id:'it',cx:268,cy:222,rx:44,ry:13,lx:268,ly:250,lab:'梭狀迴／下顳葉',n:'梭狀迴與下顳葉皮質',en:'Fusiform gyrus · Inferior temporal cortex (IT)',f:'辨認物體類別與臉孔；不論角度、大小都能認出是同一個東西。主要位於大腦底面，圖中為位置示意。',d:'整合型或聯想型失認，常合併臉孔失認（prosopagnosia）。'},
+ {id:'atl',cx:172,cy:212,rx:30,ry:15,lx:172,ly:240,lab:'前顳葉',n:'前顳葉',en:'Anterior temporal lobe (ATL)',f:'儲存物體的意義與名稱等語意知識。',d:'語意性失智：用看的、用摸的都不知道是什麼。所有感官都受影響，所以和失認症不同。'},
+ {id:'par',cx:300,cy:92,rx:40,ry:24,lx:300,ly:60,lab:'頂葉（背側路徑）',n:'後頂葉皮質',en:'Posterior parietal cortex · Dorsal stream',f:'處理位置與空間，導引伸手和抓取的動作。',d:'視覺性運動失調（optic ataxia）：認得出物體卻抓不準，剛好和 D.F. 相反，被視為雙重分離的證據。但這個解釋仍有爭議（Schenk, 2012）。'}
+];
+function brain(){
+  const sel=R.map(r=>`<ellipse class="reg" data-r="${r.id}" cx="${r.cx}" cy="${r.cy}" rx="${r.rx}" ry="${r.ry}" tabindex="0" role="button" aria-label="${r.n}"/>`).join('');
+  const lab=R.map(r=>`<text class="lab" x="${r.lx}" y="${r.ly}" text-anchor="middle">${r.lab}</text>`).join('');
+  $('bsvg').innerHTML=`<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0e8c8a"/></marker></defs>
+  <path d="M58 182 Q36 120 80 78 Q132 28 222 34 Q322 40 372 92 Q414 132 404 182 Q396 214 352 226 Q330 262 288 262 Q248 266 222 246 Q198 256 162 250 Q118 248 94 226 Q64 210 58 182 Z" fill="#f4f2ec" stroke="#5b6b86" stroke-width="3"/>
+  <path d="M138 176 Q200 150 272 166" fill="none" stroke="#5b6b86" stroke-width="2"/><path d="M232 38 Q214 100 242 150" fill="none" stroke="#5b6b86" stroke-width="2"/>
+  <text x="96" y="140" class="lab" fill-opacity=".5">額葉</text><text x="22" y="292" class="lab" text-anchor="start">← 前（臉）</text><text x="418" y="292" class="lab" text-anchor="end">後（後腦勺）→</text>
+  ${sel}
+  <path d="M378 186 Q330 206 300 222 Q240 236 200 222" fill="none" stroke="#0e8c8a" stroke-width="4" marker-end="url(#ah)" pointer-events="none"/>
+  <path d="M380 140 Q350 108 330 100" fill="none" stroke="#0e8c8a" stroke-width="4" stroke-dasharray="7 6" marker-end="url(#ah)" pointer-events="none"/>
+  ${lab}`;
+}
+function pick(id){
+  const r=R.find(x=>x.id===id);if(!r)return;
+  document.querySelectorAll('.reg').forEach(e=>e.classList.toggle('sel',e.dataset.r===id));
+  $('bname').textContent=r.n;$('ben').textContent=r.en;
+  $('binfo').innerHTML=`<dt>負責什麼</dt><dd>${r.f}</dd><dt>受損會怎樣</dt><dd>${r.d}</dd>`;
+}
+const MODES=['frag','peek','sil','view','over','brain'];
+function setMode(m){
+  mode=m;token++;cancelAnimationFrame(anim);
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===m));
+  $('game').hidden=m==='brain';$('brain').hidden=m!=='brain';
+  if(m==='brain'){$('note').textContent='物體失認症＝腹側路徑受損。損傷越早期（V1 → LOC），越像統覺型；越接近語意（顳葉），越像聯想型。';return}
+  round();
+}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
+$('opts').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(mode==='over'){if(done)return;const i=+b.dataset.i;picks.has(i)?picks.delete(i):picks.add(i);b.classList.toggle('on');b.setAttribute('aria-pressed',picks.has(i));return}
+  answer(b)});
+$('ctl').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.id==='next')round();
+  else if(b.id==='check')overCheck();
+  else if(b.id==='hint'&&!done)$('msg').textContent='提示：'+VIEW[cur][2];
+  else if(b.id==='more'&&!done&&lvl<3){lvl++;meter(4);mode==='frag'?drawFrag():drawPeek();if(lvl===3)$('msg').textContent='已經是最清楚的版本了，選一個答案吧。'}
+  else if(b.id==='fs'){try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}catch(_){}}
+});
+$('bsvg').addEventListener('click',e=>{const t=e.target.closest('.reg');if(t)pick(t.dataset.r)});
+$('bsvg').addEventListener('keydown',e=>{const t=e.target.closest('.reg');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(t.dataset.r)}});
+brain();
+const h0=(location.hash||'').slice(1);setMode(MODES.includes(h0)?h0:'frag');
+addEventListener('hashchange',()=>{const k=(location.hash||'').slice(1);if(MODES.includes(k))setMode(k)});
+}
+</script>
+</body>
+</html>
