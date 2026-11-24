@@ -229,7 +229,7 @@ function setMode(m){
   mode=m;token++;cancelAnimationFrame(anim);
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===m));
   $('game').hidden=m==='brain';$('brain').hidden=m!=='brain';
-  if(m==='brain'){$('note').textContent='物體失認症＝腹側路徑受損。損傷越早期（V1 → LOC），越像統覺型；越接近語意（顳葉），越像聯想型。';return}
+  if(m==='brain'){$('note').textContent='物體失認症＝腹側路徑受損。大致而言，影響前段知覺處理的損傷比較像統覺型，影響「連到意義」環節的比較像聯想型；但病灶和症狀不是一對一。';return}
   round();
 }
 document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
